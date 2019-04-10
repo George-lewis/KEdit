@@ -39,9 +39,9 @@ class App: Application() {
 
         stage.scene = scene
 
-        stage.width = Config["Default_width"]
+        stage.width = Config["default_width"]
 
-        stage.height = Config["Default_height"]
+        stage.height = Config["default_height"]
 
         stage.show()
 
