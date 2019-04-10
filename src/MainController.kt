@@ -5,7 +5,7 @@ import kotlin.test.todo
 
 class MainController {
 
-    // Run when the .fxml is loaded
+    // Runs when the .fxml is loaded
     fun initialize() {
 
         TODO("Implement controller init")
