@@ -31,7 +31,7 @@ class App: Application() {
 
         this.stage = stage!!
 
-        root = FXMLLoader.load(URL("MainLayout.fxml"))
+        root = FXMLLoader.load(App::class.java.getResource("MainLayout.fxml"))
 
         scene = Scene(root)
 
@@ -39,7 +39,11 @@ class App: Application() {
 
         stage.scene = scene
 
-        stage.showAndWait()
+        stage.width = Config["Default_width"]
+
+        stage.height = Config["Default_height"]
+
+        stage.show()
 
     }
 

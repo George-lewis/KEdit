@@ -8,7 +8,7 @@ class MainController {
     // Runs when the .fxml is loaded
     fun initialize() {
 
-        TODO("Implement controller init")
+        //TODO("Implement controller init")
 
     }
 

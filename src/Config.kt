@@ -28,23 +28,23 @@ object Config {
      * @return The casted config value, null if value is not present
      */
     @Suppress("IMPLICIT_CAST_TO_ANY")
-    inline operator fun <reified T> get(key: String): T? {
+    inline operator fun <reified T> get(key: String): T {
 
-        val v = dict[key]
+        val v = dict[key]!!
 
         return when(T::class) {
 
-            Int::class -> v?.toInt()
+            Int::class -> v.toInt()
 
-            Double::class -> v?.toDouble()
+            Double::class -> v.toDouble()
 
-            Boolean::class -> v?.toBoolean()
+            Boolean::class -> v.toBoolean()
 
             String::class -> v
 
             else -> throw Exception("Attempted to cast configuration value to an unknown type.")
 
-        } as T?
+        } as T
 
     }
 
