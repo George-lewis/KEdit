@@ -1,5 +1,9 @@
 font: Calibri
-window_name: KEdit - {File}
+font_size: 14
+font_change: 5
+window_name: KEdit - {File}{Changed}
 default_width: 500
 default_height: 600
 close_warning: true
+default_file_name: Untitled
+save_on_close: true
