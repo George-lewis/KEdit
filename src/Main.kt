@@ -1,9 +1,9 @@
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.scene.image.Image
 import javafx.scene.layout.Pane
 import javafx.stage.Stage
-import java.net.URL
 
 // Global App reference
 lateinit var app: App
@@ -42,6 +42,8 @@ class App: Application() {
         stage.width = Config["default_width"]
 
         stage.height = Config["default_height"]
+
+        stage.icons.add(Image("icon.png"))
 
         stage.show()
 
