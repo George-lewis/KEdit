@@ -1,7 +1,16 @@
+# Use this file to config KEdit
+
+# Font
 font: Calibri
 font_size: 14
-font_change: 5
+font_change: 5 # How much to change the font size when ctrl+ or ctrl- is pressed
+
+# Window
 window_name: KEdit - {File}{Changed}
+# Where {File} represents the file name and
+# {Changed} is an astrix (*) if the file has been changed
+# Or blank otherwise
+
 default_width: 500
 default_height: 600
 close_warning: true

@@ -1,3 +1,5 @@
+import javafx.application.ConditionalFeature
+import javafx.application.Platform
 import java.io.File
 import java.lang.Exception
 
@@ -12,7 +14,13 @@ object Config {
         // Read in config
         File("config.txt").forEachLine {
 
-            val (key, value) = it.split(":").map { it.trim() }
+            // Ignore commented and blank lines
+            if (it.startsWith("#") or it.isEmpty()) {
+                return@forEachLine
+            }
+
+            // Split key value pairs and ignore comments
+            val (key, value) = it.takeWhile { it != '#' }.split(":").map { it.trim() }
 
             dict[key] = value
 
@@ -37,6 +45,8 @@ object Config {
             Int::class -> v.toInt()
 
             Double::class -> v.toDouble()
+
+            Long::class -> v.toLong()
 
             Boolean::class -> v.toBoolean()
 

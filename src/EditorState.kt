@@ -1,8 +1,8 @@
 import javafx.beans.binding.Bindings
-import javafx.beans.binding.StringBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import java.io.File
+import java.util.concurrent.Callable
 
 object State {
 
@@ -12,8 +12,8 @@ object State {
         get() = fileP.get()
         set(value) = fileP.set(value)
 
-    val filenameP = Bindings.createStringBinding(callable
-    {if (file == null) Config["default_file_name"] else file!!.name}, fileP)
+    val filenameP = Bindings.createStringBinding(
+    Callable {if (file == null) Config["default_file_name"] else file!!.name}, fileP)
 
     val filename: String
     get() = filenameP.get()

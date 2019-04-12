@@ -30,18 +30,27 @@
           </Menu>
           <Menu mnemonicParsing="false" text="Edit">
             <items>
-                  <MenuItem mnemonicParsing="false" text="Undo" />
-                  <MenuItem mnemonicParsing="false" text="Redo" />
+                  <MenuItem fx:id="undo" mnemonicParsing="false" text="Undo" />
+                  <MenuItem fx:id="redo" mnemonicParsing="false" text="Redo" />
                   <SeparatorMenuItem mnemonicParsing="false" />
-              <MenuItem mnemonicParsing="false" text="Cut" />
-                  <MenuItem mnemonicParsing="false" text="Copy" />
-                  <MenuItem mnemonicParsing="false" text="Paste" />
-                  <MenuItem mnemonicParsing="false" text="Delete" />
+              <MenuItem fx:id="cut" mnemonicParsing="false" text="Cut" />
+                  <MenuItem fx:id="copy" mnemonicParsing="false" text="Copy" />
+                  <MenuItem fx:id="paste" mnemonicParsing="false" text="Paste" />
+                  <MenuItem fx:id="delete" mnemonicParsing="false" text="Delete" />
             </items>
           </Menu>
+            <Menu mnemonicParsing="false" text="View">
+              <items>
+                <MenuItem fx:id="zoomIn" mnemonicParsing="false" text="Zoom In" />
+                  <MenuItem fx:id="zoomOut" mnemonicParsing="false" text="Zoom Out" />
+                  <MenuItem fx:id="fullscreen" mnemonicParsing="false" text="Fullscreen" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
+                  <MenuItem mnemonicParsing="false" onAction="#changeFont" text="Font" />
+              </items>
+            </Menu>
           <Menu mnemonicParsing="false" text="Help">
             <items>
-              <MenuItem mnemonicParsing="false" text="About" />
+              <MenuItem mnemonicParsing="false" onAction="#about" text="About" />
             </items>
           </Menu>
         </menus>
@@ -73,7 +82,7 @@
                   <Insets left="5.0" right="5.0" />
                </HBox.margin>
             </Separator>
-            <Label fx:id="WordCount" alignment="TOP_CENTER" text="word count">
+            <Label fx:id="wordCount" alignment="TOP_CENTER" text="word count">
                <HBox.margin>
                   <Insets />
                </HBox.margin>
