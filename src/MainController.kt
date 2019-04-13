@@ -5,6 +5,7 @@ import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableStringValue
 import javafx.beans.value.ObservableValue
+import javafx.event.Event
 import javafx.fxml.FXML
 import javafx.geometry.Orientation
 import javafx.scene.control.*
@@ -14,10 +15,17 @@ import javafx.scene.layout.HBox
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.scene.text.TextFlow
+import javafx.stage.FileChooser
 import javafx.stage.StageStyle
 import javafx.stage.WindowEvent
 import javafx.util.Callback
 import java.io.File
+import java.net.URI
+import java.net.URISyntaxException
+import java.nio.file.Files
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.jvm.reflect
 
@@ -40,6 +48,33 @@ class MainController {
     @FXML lateinit var zoomOut: MenuItem
     @FXML lateinit var fullscreen: MenuItem
 
+    @FXML lateinit var newButton: MenuItem
+    @FXML lateinit var open: MenuItem
+    @FXML lateinit var save: MenuItem
+    @FXML lateinit var saveAs: MenuItem
+    @FXML lateinit var exit: MenuItem
+
+    val chooser = FileChooser().apply {
+
+        try {
+
+            val s = Config.get<String>("file_chooser_default_directory").replace("{User}", System.getProperty("user.home"))
+
+            if (Files.isDirectory(Paths.get(s))) {
+
+                initialDirectory = File(s)
+
+            }
+
+        } catch (e: InvalidPathException) { /* Do not set initial directory */ }
+
+        extensionFilters.setAll(
+            FileChooser.ExtensionFilter("Text Files (*.txt)", "*.txt"),
+            FileChooser.ExtensionFilter("All Files", "*.*")
+        )
+
+    }
+
     // Runs when the .fxml is loaded
     fun initialize() {
 
@@ -51,20 +86,27 @@ class MainController {
         paste.setOnAction { text.paste() }
         delete.setOnAction { text.deleteText(text.selection) }
 
-        zoomIn.accelerator = KeyCodeCombination(KeyCode.ADD, KeyCodeCombination.CONTROL_DOWN)
-        zoomOut.accelerator = KeyCodeCombination(KeyCode.MINUS, KeyCodeCombination.CONTROL_DOWN)
-        fullscreen.accelerator = KeyCodeCombination(KeyCode.F11)
+        zoomIn.accelerator = KeyCombination.keyCombination(Config["zoom_in"])
+        zoomOut.accelerator = KeyCombination.keyCombination(Config["zoom_out"])
+        fullscreen.accelerator = KeyCombination.keyCombination(Config["fullscreen"])
+
+        newButton.accelerator = KeyCombination.keyCombination(Config["new"])
+        open.accelerator = KeyCombination.keyCombination(Config["open"])
+        save.accelerator = KeyCombination.keyCombination(Config["save"])
+        saveAs.accelerator = KeyCombination.keyCombination(Config["save_as"])
+        exit.accelerator = KeyCombination.keyCombination(Config["exit"])
 
         zoomIn.setOnAction { text.font = text.font.enlarge(Config["font_change"]) }
         zoomOut.setOnAction { text.font = text.font.shrink(Config["font_change"]) }
         fullscreen.setOnAction { app.stage.isMaximized = true }
+        newButton.setOnAction { new() }
 
         // Set the font of the textarea according to the config
         text.font = Font(Config["font"], Config["font_size"])
 
         wordCount.textProperty().bind(
             Bindings.createStringBinding(
-                Callable { text.text.split(" ").filter { it.isNotEmpty() }.size.toString().plus(" Words") },
+                Callable { text.text.split(" ", "\t", "\n").filter { it.isNotEmpty() }.size.toString().plus(" Words") },
                 text.textProperty()
             ))
 
@@ -82,34 +124,78 @@ class MainController {
                 Callable {
                     Config.get<String>("window_name")
                     .replace("{File}", State.filename)
-                    .replace("{Changed}", if (State.changed) "*" else "")
+                    .replace("{Changed}", if (State.changed && !(Config["autosave"] && State.file != null)) "*" else "")
                 },
                 State.fileP, State.changedP
             ))
 
             app.stage.setOnCloseRequest(::close)
 
+            with (app.parameters.raw) {
+
+                if (this.isNotEmpty()) {
+
+                    try {
+
+                        if (Files.isRegularFile(Paths.get(first()))) {
+
+                            open(File(first()))
+
+                        }
+
+                    } catch (e: InvalidPathException) {
+
+                        // Don't open the argument path
+
+                        print(e)
+
+                    }
+
+                }
+
+            }
+
         }
 
     }
 
+    // Fires when the text in the edit area is changed
     fun textChanged(obs: ObservableValue<out String>, old: String, new: String) {
 
         State.changed = true
 
-        // TODO
+        if (Config.get<Boolean>("autosave") && State.file != null) {
+
+            save()
+
+        }
 
     }
 
+    // Save the text to the file if the file exists
+    // Otherwise invoke saveAs()
     fun save() {
 
-        // TODO
+        State.file?.let { file ->
+
+            file.writeText(text.text)
+
+            State.changed = false
+
+        } ?: saveAs()
 
     }
 
+    // Presents a dialogue to the user
     fun saveAs() {
 
-        // TODO
+        chooser.showSaveDialog(app.stage)?.let {
+
+            State.file = it
+
+            save()
+
+        }
 
     }
 
@@ -141,6 +227,55 @@ class MainController {
         }.showAndWait().ifPresent {
             text.font = it
         }
+
+    }
+
+    fun openDialogue() {
+
+        chooser.showOpenDialog(app.stage)?.let { open(it) }
+
+    }
+
+    fun open(file: File) {
+
+        // Logically speaking, the logic when closing the window is the same as when opening a different file
+        // We must check that we are not discarding any unsaved changes when we do so
+        // So we call this function to ensure as such
+        WindowEvent(app.stage, WindowEvent.ANY).let {
+
+            close(it)
+
+            if (it.isConsumed) {
+
+                return@open
+
+            }
+
+        }
+
+        if (Config["open_in_new_window"]) {
+
+            // TODO
+
+        } else {
+
+            State.file = file
+
+            text.text = file.readText()
+
+            State.changed = false
+
+        }
+
+    }
+
+    fun new() {
+
+        ProcessBuilder().command(
+            "java",
+            File("").canonicalPath,
+            "MainKt.class"
+        ).inheritIO().start()
 
     }
 
@@ -185,13 +320,9 @@ class MainController {
 
         if (State.changed) {
 
-            if (State.file != null) {
+            if (Config["save_on_close"] && State.file != null) {
 
-                if (Config["save_on_close"]) {
-
-                    save()
-
-                }
+                save()
 
             } else {
 

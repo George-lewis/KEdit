@@ -43,6 +43,10 @@ class App: Application() {
 
         stage.height = Config["default_height"]
 
+        stage.minWidth = Config["min_width"]
+
+        stage.minHeight = Config["min_height"]
+
         stage.icons.add(Image("icon.png"))
 
         stage.show()

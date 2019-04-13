@@ -3,7 +3,7 @@
 # Font
 font: Calibri
 font_size: 14
-font_change: 5 # How much to change the font size when ctrl+ or ctrl- is pressed
+font_change: 1 # How much to change the font size when ctrl+ or ctrl- is pressed
 
 # Window
 window_name: KEdit - {File}{Changed}
@@ -13,6 +13,21 @@ window_name: KEdit - {File}{Changed}
 
 default_width: 500
 default_height: 600
+min_width: 300
+min_height: 200
 close_warning: true
 default_file_name: Untitled
 save_on_close: true
+autosave: false
+open_in_new_window: false
+file_chooser_default_directory: {User}/Desktop # {User} is replaced with the user directory path
+
+# Keybinds
+zoom_in: Ctrl+add
+zoom_out: Ctrl+minus
+fullscreen: f11
+new: ctrl+n
+open: ctrl+o
+save: ctrl+s
+save_as: ctrl+shift+s
+exit: alt+f4
