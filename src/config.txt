@@ -19,7 +19,8 @@ close_warning: true
 default_file_name: Untitled
 save_on_close: true
 autosave: false
-open_in_new_window: false
+open_in_new_window: true
+new_in_new_window: false
 file_chooser_default_directory: {User}/Desktop # {User} is replaced with the user directory path
 
 # Keybinds
