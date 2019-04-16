@@ -6,8 +6,10 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableStringValue
 import javafx.beans.value.ObservableValue
 import javafx.event.Event
+import javafx.event.EventType
 import javafx.fxml.FXML
 import javafx.geometry.Orientation
+import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.*
@@ -39,24 +41,31 @@ class MainController {
 
         var paramsParsed = false
 
+        // The file chooser is reusable and can be used across different windows
         val chooser = FileChooser().apply {
-
-            try {
-
-                val s = Config.get<String>("file_chooser_default_directory").replace("{User}", System.getProperty("user.home"))
-
-                if (Files.isDirectory(Paths.get(s))) {
-
-                    initialDirectory = File(s)
-
-                }
-
-            } catch (e: InvalidPathException) { /* Do not set initial directory */ }
 
             extensionFilters.setAll(
                 FileChooser.ExtensionFilter("Text Files (*.txt)", "*.txt"),
                 FileChooser.ExtensionFilter("All Files", "*.*")
             )
+
+            Static.setInitialDirectory(this)
+
+        }
+
+        fun setInitialDirectory(f: FileChooser) {
+
+            val s = Config.get<String>("file_chooser_default_directory").replace("{User}", System.getProperty("user.home"))
+
+            try {
+
+                if (Files.isDirectory(Paths.get(s))) {
+
+                    f.initialDirectory = File(s)
+
+                }
+
+            } catch (e: InvalidPathException) { /* Do not set initial directory */ }
 
         }
 
@@ -74,27 +83,34 @@ class MainController {
     @FXML lateinit var paste: MenuItem
     @FXML lateinit var delete: MenuItem
 
+    // ### View menu items ###
     @FXML lateinit var zoomIn: MenuItem
     @FXML lateinit var zoomOut: MenuItem
     @FXML lateinit var fullscreen: MenuItem
 
+    // ### File menu items ###
     @FXML lateinit var newButton: MenuItem
     @FXML lateinit var open: MenuItem
     @FXML lateinit var save: MenuItem
     @FXML lateinit var saveAs: MenuItem
     @FXML lateinit var exit: MenuItem
 
+    // This ID maps the controller to its associated stage, scene, and root
+    // This should never be changed, do not touch
     var controllerID: Int by Delegates.notNull()
 
+    // Each controller has an associated stage, scene, and root note
+    // These properties allow easy access to the appropriate ones
     val stage: Stage
-        get() = app.windows[controllerID]!!.first
+        get() = app.windows[this]!!.first
 
     val scene: Scene
-        get() = app.windows[controllerID]!!.second
+        get() = app.windows[this]!!.second
 
     val root: Parent
-        get() = app.windows[controllerID]!!.third
+        get() = app.windows[this]!!.third
 
+    // Each window/controller has its own state
     val state = State()
 
     // Runs when the .fxml is loaded
@@ -108,28 +124,34 @@ class MainController {
         paste.setOnAction { text.paste() }
         delete.setOnAction { text.deleteText(text.selection) }
 
-        zoomIn.accelerator = KeyCombination.keyCombination(Config["zoom_in"])
-        zoomOut.accelerator = KeyCombination.keyCombination(Config["zoom_out"])
-        fullscreen.accelerator = KeyCombination.keyCombination(Config["fullscreen"])
-
-        newButton.accelerator = KeyCombination.keyCombination(Config["new"])
-        open.accelerator = KeyCombination.keyCombination(Config["open"])
-        save.accelerator = KeyCombination.keyCombination(Config["save"])
-        saveAs.accelerator = KeyCombination.keyCombination(Config["save_as"])
-        exit.accelerator = KeyCombination.keyCombination(Config["exit"])
-
         zoomIn.setOnAction { text.font = text.font.enlarge(Config["font_change"]) }
         zoomOut.setOnAction { text.font = text.font.shrink(Config["font_change"]) }
         fullscreen.setOnAction { stage.isMaximized = true }
         newButton.setOnAction { new() }
+        exit.setOnAction { stage.close() }
+
+        initKeybinds()
 
         // Set the font of the textarea according to the config
         text.font = Font(Config["font"], Config["font_size"])
 
+        // Controls the word count at the bottom of the window
+        // Count is updated each time the text changes
         wordCount.textProperty().bind(
             Bindings.createStringBinding(
-                Callable { text.text.split(" ", "\t", "\n").filter { it.isNotEmpty() }.size.toString().plus(" Words") },
-                text.textProperty()
+                Callable {
+
+                    val n = text.text.numWords()
+
+                    val sn = text.selectedText.numWords()
+
+                    // Returns a string formated "{selected word count}/{total word count} Words"
+                    // If there are selected words, else it omits the first part and returns
+                    // "{total word count} Words"
+                    return@Callable "${if (sn > 0) "${sn}/" else ""}${n} Words"
+
+                },
+                text.textProperty(), text.selectedTextProperty()
             ))
 
         // Set handler for textchange
@@ -151,18 +173,23 @@ class MainController {
                 state.fileP, state.changedP
             ))
 
+            // Handle window closes
             stage.setOnCloseRequest(::close)
 
+            // If we have not already dealt with the parameters
             if (!MainController.Static.paramsParsed) {
 
                 with(app.parameters.raw) {
 
+                    // If there are parameters
                     if (this.isNotEmpty()) {
 
                         try {
 
+                            // If the parameter is an actual file
                             if (Files.isRegularFile(Paths.get(first()))) {
 
+                                // Open the file
                                 open(File(first()))
 
                             }
@@ -179,11 +206,40 @@ class MainController {
 
                 }
 
+                // We only want to look at the parameters once
                 MainController.Static.paramsParsed = true
 
             }
 
+            scene.accelerators.put(KeyCombination.keyCombination("ctrl+q"), Runnable {
+
+                settings()
+
+            })
+
         }
+
+    }
+
+    fun disableWindow(enable: Boolean = false) {
+
+        fun disable(n: Node) {
+
+            n.isDisable = !enable
+
+            if (n is Parent) {
+
+                for (child in n.childrenUnmodifiable) {
+
+                    disable(child)
+
+                }
+
+            }
+
+        }
+
+        disable(root)
 
     }
 
@@ -194,9 +250,91 @@ class MainController {
 
         if (Config.get<Boolean>("autosave") && state.file != null) {
 
+            // If the user has configured autosave, we save on each keystroke
+
             save()
 
         }
+
+    }
+
+    fun restart() {
+
+        val (x, y) = stage.x to stage.y
+
+        val (width, height) = stage.width to stage.height
+
+        stage.onCloseRequest = null
+
+        stage.close()
+
+        app.deregister(this)
+
+        app.newWindow().apply {
+
+            state.file?.let {
+
+                this@apply.controller.open(it)
+
+            }
+
+            this@apply.controller.text.text = text.text
+
+            with (this@apply.stage) {
+
+                this.x = x
+                this.y = y
+                this.width = width
+                this.height = height
+
+                show()
+
+            }
+
+        }
+
+    }
+
+    fun settings() {
+
+        app.windows.map { it.key }.forEach { it.disableWindow() }
+
+        val (ncontroller, nstage, _, _) = app.newWindow()
+
+        print(nstage)
+
+        Platform.runLater {
+            nstage.setOnCloseRequest {
+
+                ncontroller.close(it)
+
+                println("Closed!")
+
+                //close(WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST))
+
+                Config.readConfiguration()
+
+                print(state.file?.name ?: "NULL FILE")
+
+                println(app.windows.size)
+
+                app.windows.forEach { print(it.key.stage.title + " | ")}
+
+                app.windows.map { println() ; it.key }.forEach(MainController::restart)
+
+                setInitialDirectory(chooser)
+            }
+        }
+
+        ncontroller.newButton.isDisable = true
+        ncontroller.newButton.setOnAction {  }
+
+        ncontroller.open.isDisable = true
+        ncontroller.open.setOnAction {  }
+
+        ncontroller.open(File("config.txt"))
+
+        nstage.show()
 
     }
 
@@ -229,11 +367,14 @@ class MainController {
 
     fun changeFont() {
 
+        // This dialog returns a Font instance
         Dialog<Font>().apply {
 
             initOwner(stage)
 
             title = "Font selector"
+
+            // These controls allow the user to select what font they want:
 
             val family = ChoiceBox<String>().apply { items.setAll(Font.getFamilies()); value = text.font.family }
 
@@ -248,12 +389,12 @@ class MainController {
             resultConverter = Callback {
                 return@Callback when (it) {
                     ButtonType.OK -> Font(family.value, size.value)
-                    else -> null
+                    else -> null // The user has cancelled the operation, don't change the font
                 }
             }
 
         }.showAndWait().ifPresent {
-            text.font = it
+            text.font = it // Change the TextArea's font
         }
 
     }
@@ -262,27 +403,42 @@ class MainController {
 
         chooser.showOpenDialog(stage)?.let {
 
-            // Logically speaking, the logic when closing the window is the same as when opening a different file
-            // We must check that we are not discarding any unsaved changes when we do so
-            // So we call this function to ensure as such
+            if (it == state.file) {
 
-            WindowEvent(stage, WindowEvent.ANY).let {
+                // If the user selected to open the file that's already open, do nothing
 
-                close(it)
-
-                if (it.isConsumed) {
-
-                    return@openDialogue
-
-                }
+                return
 
             }
 
             if (Config["open_in_new_window"]) {
 
-                app.newWindow().open(it)
+                // If the user has configured for 'open' to open in a new window
+                // Invoke App::newWindow and instruct the new window to open the file
+
+                app.newWindow().apply { controller.open(it); stage.show() }
 
             } else {
+
+                // Logically speaking, the logic when closing the window is the same as when opening a different file
+                // We must check that we are not discarding any unsaved changes when we do so
+                // So we call this function to ensure as such
+
+                WindowEvent(stage, WindowEvent.ANY).let {
+
+                    close(it)
+
+                    if (it.isConsumed) {
+
+                        // If user selects cancel, do nothing
+
+                        return@openDialogue
+
+                    }
+
+                }
+
+                // open the file
 
                 open(it)
 
@@ -292,13 +448,31 @@ class MainController {
 
     }
 
+    fun initKeybinds() {
+
+        zoomIn.accelerator = KeyCombination.keyCombination(Config["zoom_in"])
+        zoomOut.accelerator = KeyCombination.keyCombination(Config["zoom_out"])
+        fullscreen.accelerator = KeyCombination.keyCombination(Config["fullscreen"])
+
+        newButton.accelerator = KeyCombination.keyCombination(Config["new"])
+        open.accelerator = KeyCombination.keyCombination(Config["open"])
+        save.accelerator = KeyCombination.keyCombination(Config["save"])
+        saveAs.accelerator = KeyCombination.keyCombination(Config["save_as"])
+        exit.accelerator = KeyCombination.keyCombination(Config["exit"])
+
+    }
+
     fun open(file: File) {
 
-        state.file = file
+        if (file != state.file) {
 
-        text.text = file.readText()
+            state.file = file
 
-        state.changed = false
+            text.text = file.readText()
+
+            state.changed = false
+
+        }
 
     }
 
@@ -306,9 +480,11 @@ class MainController {
 
         if (Config["new_in_new_window"]) {
 
-            app.newWindow()
+            app.newWindow().stage.show()
 
         } else {
+
+            // Ensure we're not losing any changes
 
             WindowEvent(stage, WindowEvent.ANY).let {
 
@@ -316,14 +492,18 @@ class MainController {
 
                 if (it.isConsumed) {
 
+                    // User selected to cancel the operation -> do nothing
+
                     return@new
 
                 }
 
             }
 
+            // We are no longer operating on a file
             state.file = null
 
+            // 'File' is blank by default
             text.text = ""
 
             state.changed = false
@@ -365,11 +545,19 @@ class MainController {
 
             )
 
-        }.show()
+        }.show() // We don't need a response from this dialogue
 
     }
 
     fun close(e: WindowEvent?) {
+
+        if (state.filename == "config.txt") {
+
+            print("yep....")
+
+        }
+
+        println("closing ${stage.title}")
 
         if (state.changed) {
 
@@ -399,6 +587,7 @@ class MainController {
 
                             ButtonType.OK -> save()
 
+                            // Cancel close request
                             ButtonType.CANCEL -> e?.consume()
 
                         }
@@ -410,10 +599,12 @@ class MainController {
 
         }
 
+        // If there is a window event, and the event's type indicates the window is closing
+        // And the user has not cancelled the operation, we must remove this window from
+        // the app's registry
         if (e != null && e.eventType == WindowEvent.WINDOW_CLOSE_REQUEST && !e.isConsumed) {
 
-            // The window is actually closing
-            app.windows.remove(controllerID)
+            app.windows.remove(this)
 
         }
 

@@ -11,6 +11,14 @@ object Config {
 
     init {
 
+        readConfiguration()
+
+    }
+
+    fun readConfiguration() {
+
+        dict.clear()
+
         // Read in config
         File("config.txt").forEachLine {
 
