@@ -16,6 +16,8 @@ fun main(args: Array<String>) {
 
 }
 
+data class Window(val controller: MainController, val stage: Stage, val scene: Scene, val root: Parent)
+
 class App: Application() {
 
     init {
@@ -26,7 +28,7 @@ class App: Application() {
 
 
     // Maps controller ID's to windows, scenes, and root nodes
-    val windows: MutableMap<Int, Triple<Stage, Scene, Parent>> = mutableMapOf()
+    val windows: MutableMap<Int, Window> = mutableMapOf()
 
     override fun start(stage: Stage?) {
 
@@ -35,14 +37,24 @@ class App: Application() {
 
     }
 
+    fun deregister(controllerID: Int) {
+
+        windows.remove(controllerID)
+
+    }
+
     /**
      * Sets up and displays a new main window
      */
-    fun newWindow(stage: Stage? = Stage()): MainController {
+    fun newWindow(stage: Stage? = Stage()): Window {
 
         val stage_ = stage!!
 
-        val loader = FXMLLoader(App::class.java.getResource("MainLayout.fxml"))
+        val loader = FXMLLoader(App::class.java.getResource("/MainLayout.fxml"))
+
+        loader.location = App::class.java.getResource("MainLayout.fxml")!!
+
+        //loader.location = java.net.URL("file:MainLayout.fxml")
 
         val root: Parent = loader.load()
 
@@ -66,11 +78,13 @@ class App: Application() {
 
         controller.controllerID = windows.size
 
-        windows.put(windows.size, Triple(stage_, scene, root))
+        val window = Window(controller, stage_, scene, root)
+
+        windows.put(windows.size, window)
 
         stage.show()
 
-        return controller
+        return window
 
     }
 

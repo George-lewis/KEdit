@@ -33,7 +33,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.properties.Delegates
-import kotlin.reflect.jvm.reflect
 
 class MainController {
 
@@ -102,13 +101,13 @@ class MainController {
     // Each controller has an associated stage, scene, and root note
     // These properties allow easy access to the appropriate ones
     val stage: Stage
-        get() = app.windows[this]!!.first
+        get() = app.windows[this.controllerID]!!.stage
 
     val scene: Scene
-        get() = app.windows[this]!!.second
+        get() = app.windows[this.controllerID]!!.scene
 
     val root: Parent
-        get() = app.windows[this]!!.third
+        get() = app.windows[this.controllerID]!!.root
 
     // Each window/controller has its own state
     val state = State()
@@ -268,7 +267,7 @@ class MainController {
 
         stage.close()
 
-        app.deregister(this)
+        app.deregister(this.controllerID)
 
         app.newWindow().apply {
 
@@ -297,9 +296,13 @@ class MainController {
 
     fun settings() {
 
-        app.windows.map { it.key }.forEach { it.disableWindow() }
+    app.windows.map { it.key }.forEach {  println("DISABLE WINDOW STUB") /*it.disableWindow()*/ }
 
-        val (ncontroller, nstage, _, _) = app.newWindow()
+        val window = app.newWindow()
+
+        val ncontroller = window.controller
+
+        val nstage = window.stage
 
         print(nstage)
 
@@ -318,9 +321,9 @@ class MainController {
 
                 println(app.windows.size)
 
-                app.windows.forEach { print(it.key.stage.title + " | ")}
+                app.windows.forEach { print(it.value.stage.title + " | ")}
 
-                app.windows.map { println() ; it.key }.forEach(MainController::restart)
+                app.windows.map { println() ; it.value.controller }.forEach(MainController::restart)
 
                 setInitialDirectory(chooser)
             }
@@ -416,7 +419,11 @@ class MainController {
                 // If the user has configured for 'open' to open in a new window
                 // Invoke App::newWindow and instruct the new window to open the file
 
-                app.newWindow().apply { controller.open(it); stage.show() }
+                val win = app.newWindow()
+
+                win.controller.open(it)
+
+                win.stage.show()
 
             } else {
 
@@ -604,7 +611,7 @@ class MainController {
         // the app's registry
         if (e != null && e.eventType == WindowEvent.WINDOW_CLOSE_REQUEST && !e.isConsumed) {
 
-            app.windows.remove(this)
+            app.windows.remove(this.controllerID)
 
         }
 
